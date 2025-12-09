@@ -167,15 +167,17 @@ export default function HomePage() {
             <p className="text-muted-foreground text-lg">Find your perfect travel style</p>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-6">
             {categories.map((category, index) => (
-              <button
+              <div
                 key={index}
-                className="flex items-center gap-3 bg-white hover:bg-primary hover:text-primary-foreground transition-all duration-300 px-6 py-4 rounded-full shadow-md hover:shadow-xl group"
+                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 w-64 max-w-full flex flex-col items-center py-8 px-4 group cursor-pointer border border-transparent hover:border-primary"
               >
-                <category.icon className="w-5 h-5" />
-                <span className="font-medium">{category.label}</span>
-              </button>
+                <div className="flex items-center justify-center bg-primary/10 rounded-full w-16 h-16 mb-4">
+                  <category.icon className="w-8 h-8 text-primary" />
+                </div>
+                <span className="font-semibold text-lg text-center group-hover:text-primary transition-colors">{category.label}</span>
+              </div>
             ))}
           </div>
         </div>
