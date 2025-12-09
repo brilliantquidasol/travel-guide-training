@@ -83,7 +83,7 @@ export default function HomePage() {
 
         <div className="relative z-10 container mx-auto px-4 text-center">
           <h1 className="font-heading font-bold text-5xl md:text-7xl text-white mb-6 animate-fade-in text-balance">
-            Explore the World, One Trip at a Time.
+            Your Next Adventure Awaits — Let’s Go Somewhere Unforgettable.
           </h1>
           <p className="text-xl md:text-2xl text-white/90 mb-12 max-w-3xl mx-auto animate-slide-up leading-relaxed">
             Discover hand-picked destinations, travel stories, and guides to plan your next adventure.
