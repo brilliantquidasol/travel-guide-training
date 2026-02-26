@@ -1,236 +1,181 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Navigation } from "@/components/navigation"
-import { Footer } from "@/components/footer"
-import {
-  Search,
-  Calendar,
-  MapPin,
-  Palmtree,
-  Building2,
-  Mountain,
-  UtensilsCrossed,
-  Trees,
-  ArrowRight,
-} from "lucide-react"
-import Link from "next/link"
+import { Navigation } from "@/components/navigation";
+import { Footer } from "@/components/footer";
+import { SectionHeading } from "@/components/marketing/section-heading";
+import { DestinationCard } from "@/components/marketing/destination-card";
+import { TourCard } from "@/components/marketing/tour-card";
+import { HeroSearch } from "@/components/marketing/hero-search";
+import { NewsletterSignup } from "@/components/marketing/newsletter-signup";
+import { Testimonials } from "@/components/marketing/testimonials";
+import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { getDestinations, getTours } from "@/lib/api";
 
-export default function HomePage() {
-  const featuredDestinations = [
-    {
-      name: "Santorini, Greece",
-      tagline: "Beaches & Culture",
-      image: "/santorini-sunset.png",
-    },
-    {
-      name: "Tokyo, Japan",
-      tagline: "Modern Cityscape",
-      image: "/tokyo-japan-shibuya-crossing-neon-lights-night.jpg",
-    },
-    {
-      name: "Patagonia, Chile",
-      tagline: "Adventure & Nature",
-      image: "/patagonia-chile-mountains-torres-del-paine-hiking.jpg",
-    },
-    {
-      name: "Marrakech, Morocco",
-      tagline: "Culture & Markets",
-      image: "/marrakech-morocco-souk-market-colorful-spices.jpg",
-    },
-  ]
+export const dynamic = "force-dynamic";
 
-  const categories = [
-    { icon: Palmtree, label: "Beaches" },
-    { icon: Building2, label: "Cities" },
-    { icon: Mountain, label: "Adventure" },
-    { icon: UtensilsCrossed, label: "Food & Culture" },
-    { icon: Trees, label: "Nature Trails" },
-  ]
+export default async function HomePage() {
+  let popularDestinations: Awaited<ReturnType<typeof getDestinations>>["items"] = [];
+  let featuredTours: Awaited<ReturnType<typeof getTours>>["items"] = [];
 
-  const travelTips = [
-    {
-      image: "/luggage-packing-travel-essentials-organized.jpg",
-      title: "10 Essential Packing Tips for Long Trips",
-      snippet: "Learn how to pack efficiently and never forget important items again with our expert guide.",
-    },
-    {
-      image: "/budget-travel-backpacker-coins-money-saving.jpg",
-      title: "Budget Travel: How to See the World for Less",
-      snippet: "Discover proven strategies to save money on flights, accommodation, and experiences.",
-    },
-    {
-      image: "/solo-female-traveler-confident-happy-safe.jpg",
-      title: "Solo Travel Safety: A Complete Guide",
-      snippet: "Stay safe and confident while exploring the world on your own with these essential tips.",
-    },
-  ]
+  try {
+    const [destRes, toursRes] = await Promise.all([
+      getDestinations({ limit: 6 }),
+      getTours({ limit: 3 }),
+    ]);
+    popularDestinations = Array.isArray(destRes?.items) ? destRes.items : [];
+    featuredTours = Array.isArray(toursRes?.items) ? toursRes.items : [];
+  } catch (_e) {
+    // Stub data when API is unavailable
+    popularDestinations = [
+      {
+        _id: "1",
+        name: "Santorini, Greece",
+        slug: "santorini-greece",
+        continent: "Europe",
+        country: "Greece",
+        summary: "White-washed villages and caldera sunsets.",
+        heroImage: "https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?w=800&q=80",
+        tags: ["Beaches", "Culture"],
+      },
+      {
+        _id: "2",
+        name: "Tokyo, Japan",
+        slug: "tokyo-japan",
+        continent: "Asia",
+        country: "Japan",
+        summary: "Modern cityscape and ancient traditions.",
+        heroImage: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&q=80",
+        tags: ["Cities"],
+      },
+      {
+        _id: "3",
+        name: "Patagonia, Chile",
+        slug: "patagonia-chile",
+        continent: "South America",
+        country: "Chile",
+        summary: "Mountains, glaciers, and adventure.",
+        heroImage: "https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=800&q=80",
+        tags: ["Adventure", "Nature"],
+      },
+    ];
+    featuredTours = [
+      {
+        _id: "1",
+        title: "Classic Greek Islands",
+        slug: "classic-greek-islands",
+        durationDays: 7,
+        priceFrom: 1200,
+        highlights: ["Santorini sunset", "Mykonos beaches", "Delos ruins"],
+        destinations: [],
+      },
+      {
+        _id: "2",
+        title: "Japan Highlights",
+        slug: "japan-highlights",
+        durationDays: 10,
+        priceFrom: 2400,
+        highlights: ["Tokyo", "Kyoto temples", "Mount Fuji"],
+        destinations: [],
+      },
+      {
+        _id: "3",
+        title: "Patagonia Explorer",
+        slug: "patagonia-explorer",
+        durationDays: 8,
+        priceFrom: 1800,
+        highlights: ["Torres del Paine", "Glaciers", "Hiking"],
+        destinations: [],
+      },
+    ];
+  }
 
   return (
     <div className="min-h-screen">
       <Navigation />
 
-      {/* Hero Section */}
-      <section className="relative h-screen flex items-center justify-center overflow-hidden">
+      {/* Cinematic hero */}
+      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: `url('/beautiful-mountain-lake-sunset-traveler-silhouette.jpg')`,
+            backgroundImage: `url('https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1920&q=85')`,
           }}
         >
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-background" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-background" />
         </div>
 
-        <div className="relative z-10 container mx-auto px-4 text-center">
-          <h1 className="font-heading font-bold text-5xl md:text-7xl text-white mb-6 animate-fade-in text-balance">
-            Your Next Adventure Awaits — Let’s Go Somewhere Unforgettable.
+        <div className="relative z-10 container mx-auto px-4 text-center pt-24 pb-12">
+          <h1 className="font-heading font-bold text-4xl md:text-6xl lg:text-7xl text-white mb-6 animate-fade-in text-balance">
+            Your next adventure awaits
           </h1>
-          <p className="text-xl md:text-2xl text-white/90 mb-12 max-w-3xl mx-auto animate-slide-up leading-relaxed">
-            Discover hand-picked destinations, travel stories, and guides to plan your next adventure.
+          <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto animate-slide-up">
+            Discover destinations, curated tours, and hand-picked stays. Plan it all in one place.
           </p>
-
-          {/* Search Bar */}
-          <Card className="max-w-4xl mx-auto shadow-2xl animate-slide-up">
-            <CardContent className="p-4">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 flex items-center gap-3 bg-muted/50 rounded-xl px-4 py-3">
-                  <MapPin className="w-5 h-5 text-muted-foreground" />
-                  <Input
-                    placeholder="Where to?"
-                    className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                  />
-                </div>
-                <div className="flex-1 flex items-center gap-3 bg-muted/50 rounded-xl px-4 py-3">
-                  <Calendar className="w-5 h-5 text-muted-foreground" />
-                  <Input
-                    placeholder="When?"
-                    type="text"
-                    className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                  />
-                </div>
-                <Button size="lg" className="bg-primary hover:bg-primary/90 rounded-xl px-8">
-                  <Search className="w-5 h-5 mr-2" />
-                  Explore
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <HeroSearch />
         </div>
       </section>
 
-      {/* Featured Destinations */}
-      <section className="container mx-auto px-4 lg:px-8 py-24">
-        <div className="text-center mb-16">
-          <h2 className="font-heading font-bold text-4xl md:text-5xl mb-4">Featured Destinations</h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Handpicked locations that will inspire your next journey
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {featuredDestinations.map((destination, index) => (
-            <Link key={index} href="/destinations" className="group">
-              <Card className="overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-300 h-full">
-                <div className="relative h-80 overflow-hidden">
-                  <div
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
-                    style={{ backgroundImage: `url('${destination.image}')` }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <span className="inline-block bg-secondary/90 text-secondary-foreground text-sm font-medium px-4 py-1 rounded-full mb-3">
-                      {destination.tagline}
-                    </span>
-                    <h3 className="font-heading font-bold text-3xl text-white">{destination.name}</h3>
-                  </div>
-                </div>
-              </Card>
-            </Link>
+      {/* Popular Destinations */}
+      <section className="container mx-auto px-4 lg:px-8 py-20">
+        <SectionHeading
+          title="Popular destinations"
+          subtitle="Handpicked places that will inspire your next journey"
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {popularDestinations.slice(0, 6).map((d) => (
+            <DestinationCard key={d._id} destination={d} imageHeight="h-72" />
           ))}
         </div>
-
         <div className="text-center mt-12">
-          <Link href="/destinations">
-            <Button size="lg" variant="outline" className="rounded-full bg-transparent">
-              View All Destinations
+          <Button size="lg" variant="outline" className="rounded-full" asChild>
+            <Link href="/destinations">
+              View all destinations
               <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </section>
 
-      {/* Travel Categories */}
-      <section className="bg-muted/30 py-24">
+      {/* Featured Tours */}
+      <section className="bg-muted/30 py-20">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="font-heading font-bold text-4xl mb-4">Explore by Category</h2>
-            <p className="text-muted-foreground text-lg">Find your perfect travel style</p>
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-6">
-            {categories.map((category, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow duration-300 w-64 max-w-full flex flex-col items-center py-8 px-4 group cursor-pointer border border-transparent hover:border-primary"
-              >
-                <div className="flex items-center justify-center bg-primary/10 rounded-full w-16 h-16 mb-4">
-                  <category.icon className="w-8 h-8 text-primary" />
-                </div>
-                <span className="font-semibold text-lg text-center group-hover:text-primary transition-colors">{category.label}</span>
-              </div>
+          <SectionHeading
+            title="Featured tours"
+            subtitle="Guided experiences and multi-day adventures"
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {featuredTours.slice(0, 3).map((t) => (
+              <TourCard key={t._id} tour={t} />
             ))}
           </div>
+          <div className="text-center mt-12">
+            <Button size="lg" className="rounded-full bg-primary hover:bg-primary/90" asChild>
+              <Link href="/tours">
+                View all tours
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 
-      {/* Latest Travel Tips */}
-      <section className="container mx-auto px-4 lg:px-8 py-24">
-        <div className="text-center mb-16">
-          <h2 className="font-heading font-bold text-4xl md:text-5xl mb-4">Latest Travel Tips</h2>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Expert advice to make your travels smoother and more enjoyable
-          </p>
-        </div>
+      {/* Newsletter */}
+      <section className="container mx-auto px-4 lg:px-8 py-20">
+        <NewsletterSignup />
+      </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {travelTips.map((tip, index) => (
-            <Card
-              key={index}
-              className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-shadow duration-300 group"
-            >
-              <div className="relative h-48 overflow-hidden">
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-110"
-                  style={{ backgroundImage: `url('${tip.image}')` }}
-                />
-              </div>
-              <CardContent className="p-6">
-                <h3 className="font-heading font-semibold text-xl mb-3 group-hover:text-primary transition-colors">
-                  {tip.title}
-                </h3>
-                <p className="text-muted-foreground leading-relaxed mb-4">{tip.snippet}</p>
-                <Link
-                  href="/travel-tips"
-                  className="text-primary font-medium inline-flex items-center hover:gap-2 transition-all"
-                >
-                  Read More
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        <div className="text-center mt-12">
-          <Link href="/travel-tips">
-            <Button size="lg" className="bg-primary hover:bg-primary/90 rounded-full">
-              View All Tips
-            </Button>
-          </Link>
+      {/* Testimonials */}
+      <section className="bg-muted/30 py-20">
+        <div className="container mx-auto px-4 lg:px-8">
+          <SectionHeading
+            title="What travelers say"
+            subtitle="Real stories from people who planned with Wanderlust"
+          />
+          <Testimonials />
         </div>
       </section>
 
       <Footer />
     </div>
-  )
+  );
 }

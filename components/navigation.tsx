@@ -8,30 +8,36 @@ import { useState, useEffect } from "react"
 
 export function Navigation() {
   const pathname = usePathname()
+  const [mounted, setMounted] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20)
     }
     window.addEventListener("scroll", handleScroll)
+    handleScroll()
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/destinations", label: "Destinations" },
+    { href: "/tours", label: "Tours" },
+    { href: "/hotels", label: "Hotels" },
     { href: "/travel-tips", label: "Travel Tips" },
     { href: "/photo-journal", label: "Photo Journal" },
     { href: "/plan-trip", label: "Plan Trip" },
+    { href: "/dashboard", label: "Dashboard" },
   ]
 
   return (
     <header
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-        isScrolled ? "bg-white/95 backdrop-blur-md shadow-md" : "bg-transparent",
+        mounted && isScrolled ? "bg-white/95 backdrop-blur-md shadow-md" : "bg-transparent",
       )}
     >
       <nav className="container mx-auto px-4 lg:px-8">

@@ -1,501 +1,441 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Navigation } from "@/components/navigation"
-import { Footer } from "@/components/footer"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Navigation } from "@/components/navigation";
+import { Footer } from "@/components/footer";
 import {
+  getDestinations,
+  getTours,
+  getHotels,
+  createTrip,
+  type Destination,
+  type Tour,
+  type Hotel,
+  type ItineraryItem,
+} from "@/lib/api";
+import { setStoredUserId, getStoredUserId } from "@/lib/auth";
+import {
+  MapPin,
   CalendarDays,
   Users,
-  MapPin,
-  Plane,
-  Hotel,
-  Utensils,
-  Camera,
   Banknote,
+  ArrowRight,
+  ArrowLeft,
   CheckCircle2,
-  Plus,
-  Trash2,
-} from "lucide-react"
+  Loader2,
+} from "lucide-react";
 
-interface Activity {
-  id: string
-  title: string
-  time: string
-}
-
-interface DayPlan {
-  day: number
-  activities: Activity[]
-}
+const TRAVEL_STYLES = [
+  "Leisure",
+  "Adventure",
+  "Culture",
+  "Beach",
+  "City",
+  "Nature",
+  "Solo",
+  "Family",
+];
 
 export default function PlanTripPage() {
-  const [tripName, setTripName] = useState("")
-  const [destination, setDestination] = useState("")
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
-  const [travelers, setTravelers] = useState("1")
-  const [budget, setBudget] = useState("")
-  const [tripType, setTripType] = useState("")
-  const [notes, setNotes] = useState("")
-  const [interests, setInterests] = useState<string[]>([])
-  const [dayPlans, setDayPlans] = useState<DayPlan[]>([])
+  const router = useRouter();
+  const [step, setStep] = useState(1);
 
-  const interestOptions = [
-    { id: "beaches", label: "Beaches", icon: "🏖️" },
-    { id: "culture", label: "Culture & History", icon: "🏛️" },
-    { id: "food", label: "Food & Dining", icon: "🍽️" },
-    { id: "adventure", label: "Adventure", icon: "🏔️" },
-    { id: "nature", label: "Nature & Wildlife", icon: "🌿" },
-    { id: "photography", label: "Photography", icon: "📸" },
-    { id: "nightlife", label: "Nightlife", icon: "🌃" },
-    { id: "shopping", label: "Shopping", icon: "🛍️" },
-  ]
+  // Step 1: basic info
+  const [title, setTitle] = useState("");
+  const [originCity, setOriginCity] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [budget, setBudget] = useState("");
+  const [travelerCount, setTravelerCount] = useState("1");
+  const [travelStyle, setTravelStyle] = useState("");
 
-  const toggleInterest = (id: string) => {
-    setInterests((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
-  }
+  // Step 2: destinations (from catalog)
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+  const [selectedDestinationIds, setSelectedDestinationIds] = useState<string[]>([]);
+  const [destinationsLoading, setDestinationsLoading] = useState(true);
 
-  const addDay = () => {
-    setDayPlans([
-      ...dayPlans,
-      {
-        day: dayPlans.length + 1,
-        activities: [],
-      },
-    ])
-  }
+  // Step 3: tours/hotels per destination
+  const [toursByDest, setToursByDest] = useState<Record<string, Tour[]>>({});
+  const [hotelsByDest, setHotelsByDest] = useState<Record<string, Hotel[]>>({});
+  const [selectedTours, setSelectedTours] = useState<string[]>([]);
+  const [selectedHotels, setSelectedHotels] = useState<string[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
 
-  const removeDay = (day: number) => {
-    setDayPlans(dayPlans.filter((d) => d.day !== day))
-  }
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const addActivity = (day: number) => {
-    setDayPlans(
-      dayPlans.map((d) =>
-        d.day === day
-          ? {
-              ...d,
-              activities: [...d.activities, { id: Date.now().toString(), title: "", time: "" }],
-            }
-          : d,
-      ),
-    )
-  }
+  // Ensure we have a user id for API (v1 dev stub)
+  useEffect(() => {
+    if (!getStoredUserId()) {
+      setStoredUserId("dev-user-" + Math.random().toString(36).slice(2, 10));
+    }
+  }, []);
 
-  const removeActivity = (day: number, activityId: string) => {
-    setDayPlans(
-      dayPlans.map((d) => (d.day === day ? { ...d, activities: d.activities.filter((a) => a.id !== activityId) } : d)),
-    )
-  }
+  // Fetch destinations for step 2
+  useEffect(() => {
+    setDestinationsLoading(true);
+    getDestinations({ limit: 50 })
+      .then((r) => setDestinations(r.items))
+      .catch(() => setDestinations([]))
+      .finally(() => setDestinationsLoading(false));
+  }, []);
 
-  const updateActivity = (day: number, activityId: string, field: string, value: string) => {
-    setDayPlans(
-      dayPlans.map((d) =>
-        d.day === day
-          ? {
-              ...d,
-              activities: d.activities.map((a) => (a.id === activityId ? { ...a, [field]: value } : a)),
-            }
-          : d,
-      ),
-    )
-  }
+  // When destinations selected, fetch tours and hotels for each (step 3)
+  useEffect(() => {
+    if (step !== 3 || selectedDestinationIds.length === 0) return;
+    setCatalogLoading(true);
+    const tours: Record<string, Tour[]> = {};
+    const hotels: Record<string, Hotel[]> = {};
+    Promise.all(
+      selectedDestinationIds.map(async (destId) => {
+        const [tRes, hRes] = await Promise.all([
+          getTours({ destinationId: destId, limit: 10 }),
+          getHotels({ destinationId: destId, limit: 10 }),
+        ]);
+        tours[destId] = tRes.items;
+        hotels[destId] = hRes.items;
+      })
+    ).then(() => {
+      setToursByDest(tours);
+      setHotelsByDest(hotels);
+      setCatalogLoading(false);
+    });
+  }, [step, selectedDestinationIds.join(",")]);
+
+  const toggleDestination = (id: string) => {
+    setSelectedDestinationIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleTour = (tourId: string) => {
+    setSelectedTours((prev) =>
+      prev.includes(tourId) ? prev.filter((x) => x !== tourId) : [...prev, tourId]
+    );
+  };
+
+  const toggleHotel = (hotelId: string) => {
+    setSelectedHotels((prev) =>
+      prev.includes(hotelId) ? prev.filter((x) => x !== hotelId) : [...prev, hotelId]
+    );
+  };
+
+  const buildItinerary = (): ItineraryItem[] => {
+    const items: ItineraryItem[] = [];
+    const start = startDate ? new Date(startDate) : new Date();
+    const end = endDate ? new Date(endDate) : new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)));
+    let dayIndex = 0;
+    selectedTours.forEach((tourId) => {
+      const d = new Date(start);
+      d.setDate(d.getDate() + dayIndex % days);
+      items.push({
+        type: "tour",
+        productId: tourId,
+        date: d.toISOString().slice(0, 10),
+        title: "Tour",
+      });
+      dayIndex++;
+    });
+    selectedHotels.forEach((hotelId) => {
+      const d = new Date(start);
+      d.setDate(d.getDate() + dayIndex % days);
+      items.push({
+        type: "hotel",
+        productId: hotelId,
+        date: d.toISOString().slice(0, 10),
+        title: "Hotel stay",
+      });
+      dayIndex++;
+    });
+    return items;
+  };
+
+  const handleComplete = async () => {
+    setError(null);
+    setSubmitting(true);
+    try {
+      const trip = await createTrip({
+        title: title || "My Trip",
+        startDate: startDate || new Date().toISOString().slice(0, 10),
+        endDate: endDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+        originCity: originCity || undefined,
+        budget: budget ? Number(budget) : undefined,
+        travelerCount: travelerCount ? Number(travelerCount) : 1,
+        travelStyle: travelStyle || undefined,
+        destinationIds: selectedDestinationIds.length ? selectedDestinationIds : undefined,
+        itinerary: buildItinerary(),
+      });
+      router.push(`/dashboard/trips/${trip._id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create trip");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const canGoNext =
+    step === 1
+      ? !!startDate && !!endDate
+      : step === 2
+        ? selectedDestinationIds.length > 0
+        : true;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation Component */}
       <Navigation />
 
-      {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-primary/10 via-secondary/5 to-accent/10 pt-32 pb-16">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="font-heading font-bold text-4xl md:text-5xl lg:text-6xl text-foreground mb-6">
-              Plan Your Dream Trip
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground">
-              Create a detailed itinerary, set your budget, and organize every aspect of your journey
-            </p>
+      <section className="pt-28 pb-12 px-4">
+        <div className="container max-w-3xl mx-auto">
+          <h1 className="font-heading font-bold text-4xl mb-2">Plan your trip</h1>
+          <p className="text-muted-foreground mb-8">
+            Fill in the basics, pick destinations, then add tours and hotels. You can edit the itinerary later.
+          </p>
+
+          {/* Step indicator */}
+          <div className="flex gap-2 mb-10">
+            {[1, 2, 3].map((s) => (
+              <div
+                key={s}
+                className={`h-2 flex-1 rounded-full ${step >= s ? "bg-primary" : "bg-muted"}`}
+              />
+            ))}
           </div>
-        </div>
-      </section>
 
-      {/* Planning Form */}
-      <section className="py-12 md:py-16">
-        <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
-          {/* Trip Overview */}
-          <Card className="mb-8 shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-heading text-2xl flex items-center gap-2">
-                <MapPin className="w-6 h-6 text-primary" />
-                Trip Overview
-              </CardTitle>
-              <CardDescription>Let's start with the basics of your journey</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="tripName">Trip Name</Label>
+          {step === 1 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Basic info</CardTitle>
+                <CardDescription>When and how you&apos;re traveling</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label>Trip name</Label>
                   <Input
-                    id="tripName"
-                    placeholder="e.g., Summer in Europe"
-                    value={tripName}
-                    onChange={(e) => setTripName(e.target.value)}
+                    placeholder="e.g. Summer in Europe"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="destination">Destination</Label>
+                <div>
+                  <Label>Origin city</Label>
                   <Input
-                    id="destination"
-                    placeholder="e.g., Paris, France"
-                    value={destination}
-                    onChange={(e) => setDestination(e.target.value)}
+                    placeholder="e.g. New York"
+                    value={originCity}
+                    onChange={(e) => setOriginCity(e.target.value)}
                   />
                 </div>
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="startDate" className="flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4" />
-                    Start Date
-                  </Label>
-                  <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Start date</Label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>End date</Label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date</Label>
-                  <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Budget (USD)</Label>
+                    <Input
+                      type="number"
+                      placeholder="5000"
+                      value={budget}
+                      onChange={(e) => setBudget(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Travelers</Label>
+                    <Select value={travelerCount} onValueChange={setTravelerCount}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5, 6].map((n) => (
+                          <SelectItem key={n} value={String(n)}>
+                            {n}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="travelers" className="flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    Travelers
-                  </Label>
-                  <Select value={travelers} onValueChange={setTravelers}>
-                    <SelectTrigger id="travelers">
-                      <SelectValue />
+                <div>
+                  <Label>Travel style</Label>
+                  <Select value={travelStyle} onValueChange={setTravelStyle}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select style" />
                     </SelectTrigger>
                     <SelectContent>
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                        <SelectItem key={num} value={num.toString()}>
-                          {num} {num === 1 ? "Traveler" : "Travelers"}
+                      {TRAVEL_STYLES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          )}
 
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="budget" className="flex items-center gap-2">
-                    <Banknote className="w-4 h-4" />
-                    Budget (USD)
-                  </Label>
-                  <Input
-                    id="budget"
-                    type="number"
-                    placeholder="e.g., 5000"
-                    value={budget}
-                    onChange={(e) => setBudget(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tripType">Trip Type</Label>
-                  <Select value={tripType} onValueChange={setTripType}>
-                    <SelectTrigger id="tripType">
-                      <SelectValue placeholder="Select trip type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="leisure">Leisure</SelectItem>
-                      <SelectItem value="adventure">Adventure</SelectItem>
-                      <SelectItem value="business">Business</SelectItem>
-                      <SelectItem value="family">Family Vacation</SelectItem>
-                      <SelectItem value="romantic">Romantic Getaway</SelectItem>
-                      <SelectItem value="solo">Solo Travel</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Interests */}
-          <Card className="mb-8 shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-heading text-2xl flex items-center gap-2">
-                <Camera className="w-6 h-6 text-primary" />
-                What Interests You?
-              </CardTitle>
-              <CardDescription>Select all that apply to personalize your experience</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {interestOptions.map((option) => (
-                  <div
-                    key={option.id}
-                    className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all cursor-pointer ${
-                      interests.includes(option.id)
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                    onClick={() => toggleInterest(option.id)}
-                  >
-                    <Checkbox
-                      id={option.id}
-                      checked={interests.includes(option.id)}
-                      onCheckedChange={() => toggleInterest(option.id)}
-                    />
-                    <Label htmlFor={option.id} className="cursor-pointer flex items-center gap-2 flex-1">
-                      <span className="text-xl">{option.icon}</span>
-                      <span className="text-sm font-medium">{option.label}</span>
-                    </Label>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Daily Itinerary */}
-          <Card className="mb-8 shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-heading text-2xl flex items-center gap-2">
-                <CalendarDays className="w-6 h-6 text-primary" />
-                Daily Itinerary
-              </CardTitle>
-              <CardDescription>Plan your activities day by day</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {dayPlans.map((dayPlan) => (
-                <div key={dayPlan.day} className="border border-border rounded-xl p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-heading font-semibold text-xl">Day {dayPlan.day}</h3>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeDay(dayPlan.day)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  <div className="space-y-3">
-                    {dayPlan.activities.map((activity) => (
-                      <div key={activity.id} className="flex gap-3 items-start">
-                        <Input
-                          placeholder="Time (e.g., 9:00 AM)"
-                          value={activity.time}
-                          onChange={(e) => updateActivity(dayPlan.day, activity.id, "time", e.target.value)}
-                          className="w-32"
-                        />
-                        <Input
-                          placeholder="Activity (e.g., Visit Eiffel Tower)"
-                          value={activity.title}
-                          onChange={(e) => updateActivity(dayPlan.day, activity.id, "title", e.target.value)}
-                          className="flex-1"
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeActivity(dayPlan.day, activity.id)}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+          {step === 2 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Choose destinations</CardTitle>
+                <CardDescription>From our catalog (select at least one)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {destinationsLoading ? (
+                  <p className="text-muted-foreground">Loading destinations…</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                    {destinations.map((d) => (
+                      <button
+                        key={d._id}
+                        type="button"
+                        onClick={() => toggleDestination(d._id)}
+                        className={`text-left p-4 rounded-xl border-2 transition-colors ${
+                          selectedDestinationIds.includes(d._id)
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <span className="font-medium">{d.name}</span>
+                        <span className="text-muted-foreground text-sm block">{d.country}</span>
+                      </button>
                     ))}
                   </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-                  <Button variant="outline" size="sm" onClick={() => addActivity(dayPlan.day)} className="mt-4 w-full">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Activity
-                  </Button>
-                </div>
-              ))}
+          {step === 3 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Tours & hotels</CardTitle>
+                <CardDescription>Add suggested tours and hotels for your destinations</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {catalogLoading ? (
+                  <p className="text-muted-foreground">Loading suggestions…</p>
+                ) : (
+                  <>
+                    {selectedDestinationIds.map((destId) => {
+                      const dest = destinations.find((d) => d._id === destId);
+                      const tours = toursByDest[destId] ?? [];
+                      const hotels = hotelsByDest[destId] ?? [];
+                      return (
+                        <div key={destId} className="border rounded-xl p-4 space-y-4">
+                          <h3 className="font-heading font-semibold text-lg">{dest?.name ?? destId}</h3>
+                          {tours.length > 0 && (
+                            <div>
+                              <Label className="text-sm text-muted-foreground">Tours</Label>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {tours.map((t) => (
+                                  <button
+                                    key={t._id}
+                                    type="button"
+                                    onClick={() => toggleTour(t._id)}
+                                    className={`px-3 py-2 rounded-lg border text-sm ${
+                                      selectedTours.includes(t._id)
+                                        ? "border-primary bg-primary/10"
+                                        : "border-border"
+                                    }`}
+                                  >
+                                    {t.title} (${t.priceFrom})
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {hotels.length > 0 && (
+                            <div>
+                              <Label className="text-sm text-muted-foreground">Hotels</Label>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                {hotels.map((h) => (
+                                  <button
+                                    key={h._id}
+                                    type="button"
+                                    onClick={() => toggleHotel(h._id)}
+                                    className={`px-3 py-2 rounded-lg border text-sm ${
+                                      selectedHotels.includes(h._id)
+                                        ? "border-primary bg-primary/10"
+                                        : "border-border"
+                                    }`}
+                                  >
+                                    {h.name}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {tours.length === 0 && hotels.length === 0 && (
+                            <p className="text-sm text-muted-foreground">No tours or hotels for this destination yet.</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-              <Button onClick={addDay} variant="outline" className="w-full bg-transparent">
-                <Plus className="w-5 h-5 mr-2" />
-                Add Day
+          {error && (
+            <p className="text-destructive text-sm mt-4">{error}</p>
+          )}
+
+          <div className="flex justify-between mt-8">
+            <Button
+              variant="outline"
+              onClick={() => setStep((s) => Math.max(1, s - 1))}
+              disabled={step === 1}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+            {step < 3 ? (
+              <Button onClick={() => setStep((s) => s + 1)} disabled={!canGoNext}>
+                Next
+                <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
-            </CardContent>
-          </Card>
-
-          {/* Quick Checklist */}
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle className="font-heading text-lg flex items-center gap-2">
-                  <Plane className="w-5 h-5 text-primary" />
-                  Flights
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Checkbox id="flight-book" />
-                  <Label htmlFor="flight-book" className="cursor-pointer">
-                    Book flights
-                  </Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox id="flight-confirm" />
-                  <Label htmlFor="flight-confirm" className="cursor-pointer">
-                    Confirm bookings
-                  </Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox id="flight-checkin" />
-                  <Label htmlFor="flight-checkin" className="cursor-pointer">
-                    Online check-in
-                  </Label>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle className="font-heading text-lg flex items-center gap-2">
-                  <Hotel className="w-5 h-5 text-primary" />
-                  Accommodation
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Checkbox id="hotel-book" />
-                  <Label htmlFor="hotel-book" className="cursor-pointer">
-                    Book hotels
-                  </Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox id="hotel-confirm" />
-                  <Label htmlFor="hotel-confirm" className="cursor-pointer">
-                    Confirm reservations
-                  </Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox id="hotel-directions" />
-                  <Label htmlFor="hotel-directions" className="cursor-pointer">
-                    Save directions
-                  </Label>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-md">
-              <CardHeader>
-                <CardTitle className="font-heading text-lg flex items-center gap-2">
-                  <Utensils className="w-5 h-5 text-primary" />
-                  Dining
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Checkbox id="restaurant-research" />
-                  <Label htmlFor="restaurant-research" className="cursor-pointer">
-                    Research restaurants
-                  </Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox id="restaurant-reserve" />
-                  <Label htmlFor="restaurant-reserve" className="cursor-pointer">
-                    Make reservations
-                  </Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox id="restaurant-dietary" />
-                  <Label htmlFor="restaurant-dietary" className="cursor-pointer">
-                    Note dietary needs
-                  </Label>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Additional Notes */}
-          <Card className="mb-8 shadow-lg">
-            <CardHeader>
-              <CardTitle className="font-heading text-2xl">Additional Notes</CardTitle>
-              <CardDescription>Any other details, requirements, or ideas for your trip</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Textarea
-                placeholder="Add notes about visa requirements, travel insurance, special events, local contacts, or anything else..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="min-h-32"
-              />
-            </CardContent>
-          </Card>
-
-          {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="rounded-full px-8">
-              <CheckCircle2 className="w-5 h-5 mr-2" />
-              Save Trip Plan
-            </Button>
-            <Button size="lg" variant="outline" className="rounded-full px-8 bg-transparent">
-              Export as PDF
-            </Button>
-            <Button size="lg" variant="outline" className="rounded-full px-8 bg-transparent">
-              Share with Others
-            </Button>
+            ) : (
+              <Button onClick={handleComplete} disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating…
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Create trip
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </section>
 
-      {/* Tips Section */}
-      <section className="py-12 md:py-16 bg-muted/30">
-        <div className="container mx-auto px-4 lg:px-8 max-w-6xl">
-          <h2 className="font-heading font-bold text-3xl text-center mb-8">Planning Tips</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mb-4">
-                  <CalendarDays className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="font-heading font-semibold text-lg mb-2">Book Early</h3>
-                <p className="text-muted-foreground text-sm">
-                  Reserve flights and hotels 2-3 months in advance for better rates and availability.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="w-12 h-12 bg-secondary/10 rounded-xl flex items-center justify-center mb-4">
-                  <Banknote className="w-6 h-6 text-secondary" />
-                </div>
-                <h3 className="font-heading font-semibold text-lg mb-2">Budget Buffer</h3>
-                <p className="text-muted-foreground text-sm">
-                  Add 15-20% extra to your budget for unexpected expenses and spontaneous experiences.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="pt-6">
-                <div className="w-12 h-12 bg-accent/50 rounded-xl flex items-center justify-center mb-4">
-                  <MapPin className="w-6 h-6 text-accent-foreground" />
-                </div>
-                <h3 className="font-heading font-semibold text-lg mb-2">Stay Flexible</h3>
-                <p className="text-muted-foreground text-sm">
-                  Leave some free time in your itinerary to explore and discover hidden gems.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer Component */}
       <Footer />
     </div>
-  )
+  );
 }
