@@ -1,16 +1,19 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Menu, X, Compass } from "lucide-react"
+import { Menu, X, Compass, LogOut } from "lucide-react"
 import { useState, useEffect } from "react"
+import { getStoredUserId, clearStoredUserId } from "@/lib/auth"
 
 export function Navigation() {
   const pathname = usePathname()
+  const router = useRouter()
   const [mounted, setMounted] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -21,6 +24,19 @@ export function Navigation() {
     handleScroll()
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    setIsLoggedIn(!!getStoredUserId())
+  }, [mounted, pathname])
+
+  const handleLogout = () => {
+    clearStoredUserId()
+    setIsLoggedIn(false)
+    router.replace("/")
+    router.refresh()
+    setMobileMenuOpen(false)
+  }
 
   const navLinks = [
     { href: "/", label: "Home" },
@@ -66,7 +82,7 @@ export function Navigation() {
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-6">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
@@ -91,6 +107,19 @@ export function Navigation() {
                 )}
               </Link>
             ))}
+            {mounted && isLoggedIn && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className={cn(
+                  "font-medium transition-colors duration-300 hover:opacity-80 relative py-2 flex items-center gap-1.5",
+                  useLightNav ? "text-white/90 hover:text-white" : "text-foreground/70 hover:text-foreground",
+                )}
+              >
+                <LogOut className="h-4 w-4" />
+                Log out
+              </button>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -123,6 +152,16 @@ export function Navigation() {
                   {link.label}
                 </Link>
               ))}
+              {mounted && isLoggedIn && (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-2 py-2 font-medium text-foreground/70 hover:text-primary"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Log out
+                </button>
+              )}
             </div>
           </div>
         )}

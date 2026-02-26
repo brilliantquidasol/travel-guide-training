@@ -96,6 +96,17 @@ export default function DashboardLayout({
                   Dashboard
                 </Link>
                 {navContent}
+                <div className="mt-4 border-t px-3 pt-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-muted-foreground"
+                    onClick={() => { setMobileOpen(false); handleLogout(); }}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign out
+                  </Button>
+                </div>
               </div>
             </SheetContent>
           </Sheet>
@@ -105,8 +116,19 @@ export default function DashboardLayout({
           </Link>
           <div className="flex-1" />
           <Link href="/plan-trip">
-            <Button size="sm">Plan trip</Button>
+            <Button size="sm" variant="outline" className="rounded-lg">
+              Plan trip
+            </Button>
           </Link>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="rounded-lg text-muted-foreground"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4 mr-1" />
+            Sign out
+          </Button>
         </div>
       </header>
 
