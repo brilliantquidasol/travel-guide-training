@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,15 @@ import {
   ArrowLeft,
   CheckCircle2,
   Loader2,
+  Plane,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const ORIGIN_CITIES = [
+  "New York", "Los Angeles", "Chicago", "San Francisco", "Miami", "Boston", "Seattle", "Washington DC",
+  "London", "Paris", "Berlin", "Amsterdam", "Madrid", "Rome", "Barcelona", "Frankfurt", "Zurich",
+  "Tokyo", "Singapore", "Hong Kong", "Seoul", "Sydney", "Dubai", "Toronto", "Vancouver", "Mexico City",
+];
 
 const TRAVEL_STYLES = [
   "Leisure",
@@ -69,6 +77,30 @@ export default function PlanTripPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [originDropdownOpen, setOriginDropdownOpen] = useState(false);
+  const [originFocusedIndex, setOriginFocusedIndex] = useState(0);
+  const originRef = useRef<HTMLDivElement>(null);
+
+  const originSuggestions = useMemo(() => {
+    const q = originCity.trim().toLowerCase();
+    if (!q) return ORIGIN_CITIES.slice(0, 8);
+    return ORIGIN_CITIES.filter((c) => c.toLowerCase().includes(q)).slice(0, 8);
+  }, [originCity]);
+
+  useEffect(() => {
+    setOriginDropdownOpen(originSuggestions.length > 0);
+    setOriginFocusedIndex(0);
+  }, [originCity, originSuggestions.length]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (originRef.current && !originRef.current.contains(e.target as Node)) {
+        setOriginDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Ensure we have a user id for API (v1 dev stub)
   useEffect(() => {
@@ -200,75 +232,143 @@ export default function PlanTripPage() {
 
           {/* Step indicator */}
           <div className="flex gap-2 mb-10">
-            {[1, 2, 3].map((s) => (
+            {[
+              { step: 1, label: "Basics" },
+              { step: 2, label: "Destinations" },
+              { step: 3, label: "Tours & hotels" },
+            ].map(({ step: s, label }) => (
               <div
                 key={s}
-                className={`h-2 flex-1 rounded-full ${step >= s ? "bg-primary" : "bg-muted"}`}
-              />
+                className={cn(
+                  "flex-1 rounded-xl py-2.5 px-3 text-center transition-colors",
+                  step === s ? "bg-primary text-primary-foreground" : step > s ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                )}
+              >
+                <span className="text-xs font-medium hidden sm:inline">{label}</span>
+                <span className="sm:hidden font-semibold">{s}</span>
+              </div>
             ))}
           </div>
 
           {step === 1 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Basic info</CardTitle>
+            <Card className="border-0 shadow-xl overflow-hidden">
+              <CardHeader className="bg-muted/30 border-b">
+                <CardTitle className="flex items-center gap-2">
+                  <Plane className="w-5 h-5 text-primary" />
+                  Basic info
+                </CardTitle>
                 <CardDescription>When and how you&apos;re traveling</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-6 md:p-8 space-y-6">
                 <div>
-                  <Label>Trip name</Label>
+                  <Label className="text-sm font-medium">Trip name</Label>
                   <Input
                     placeholder="e.g. Summer in Europe"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                    className="mt-1.5 h-11 rounded-xl border-border bg-background"
                   />
                 </div>
-                <div>
-                  <Label>Origin city</Label>
-                  <Input
-                    placeholder="e.g. New York"
-                    value={originCity}
-                    onChange={(e) => setOriginCity(e.target.value)}
-                  />
+                <div ref={originRef} className="relative">
+                  <Label className="text-sm font-medium">Origin city</Label>
+                  <div className="relative mt-1.5">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      placeholder="Where are you traveling from?"
+                      value={originCity}
+                      onChange={(e) => setOriginCity(e.target.value)}
+                      onFocus={() => originSuggestions.length > 0 && setOriginDropdownOpen(true)}
+                      onKeyDown={(e) => {
+                        if (!originDropdownOpen || originSuggestions.length === 0) return;
+                        if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          setOriginFocusedIndex((i) => (i + 1) % originSuggestions.length);
+                        } else if (e.key === "ArrowUp") {
+                          e.preventDefault();
+                          setOriginFocusedIndex((i) => (i - 1 + originSuggestions.length) % originSuggestions.length);
+                        } else if (e.key === "Enter" && originSuggestions[originFocusedIndex]) {
+                          e.preventDefault();
+                          setOriginCity(originSuggestions[originFocusedIndex]);
+                          setOriginDropdownOpen(false);
+                        } else if (e.key === "Escape") setOriginDropdownOpen(false);
+                      }}
+                      className="pl-10 h-11 rounded-xl border-border bg-background"
+                    />
+                    {originDropdownOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-background border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+                        {originSuggestions.map((city, i) => (
+                          <button
+                            key={city}
+                            type="button"
+                            onClick={() => {
+                              setOriginCity(city);
+                              setOriginDropdownOpen(false);
+                            }}
+                            className={cn(
+                              "w-full text-left px-4 py-3 text-sm transition-colors",
+                              i === originFocusedIndex ? "bg-muted" : "hover:bg-muted/80"
+                            )}
+                          >
+                            {city}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label>Start date</Label>
+                    <Label className="text-sm font-medium flex items-center gap-1.5">
+                      <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                      Start date
+                    </Label>
                     <Input
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
+                      className="mt-1.5 h-11 rounded-xl border-border"
                     />
                   </div>
                   <div>
-                    <Label>End date</Label>
+                    <Label className="text-sm font-medium flex items-center gap-1.5">
+                      <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                      End date
+                    </Label>
                     <Input
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
+                      className="mt-1.5 h-11 rounded-xl border-border"
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <Label>Budget (USD)</Label>
+                    <Label className="text-sm font-medium flex items-center gap-1.5">
+                      <Banknote className="w-4 h-4 text-muted-foreground" />
+                      Budget (USD)
+                    </Label>
                     <Input
                       type="number"
-                      placeholder="5000"
+                      placeholder="e.g. 5000"
                       value={budget}
                       onChange={(e) => setBudget(e.target.value)}
+                      className="mt-1.5 h-11 rounded-xl border-border"
                     />
                   </div>
                   <div>
-                    <Label>Travelers</Label>
+                    <Label className="text-sm font-medium flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-muted-foreground" />
+                      Travelers
+                    </Label>
                     <Select value={travelerCount} onValueChange={setTravelerCount}>
-                      <SelectTrigger>
-                        <SelectValue />
+                      <SelectTrigger className="mt-1.5 h-11 rounded-xl border-border">
+                        <SelectValue placeholder="Number of travelers" />
                       </SelectTrigger>
                       <SelectContent>
                         {[1, 2, 3, 4, 5, 6].map((n) => (
                           <SelectItem key={n} value={String(n)}>
-                            {n}
+                            {n} {n === 1 ? "traveler" : "travelers"}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -276,10 +376,10 @@ export default function PlanTripPage() {
                   </div>
                 </div>
                 <div>
-                  <Label>Travel style</Label>
+                  <Label className="text-sm font-medium">Travel style</Label>
                   <Select value={travelStyle} onValueChange={setTravelStyle}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select style" />
+                    <SelectTrigger className="mt-1.5 h-11 rounded-xl border-border">
+                      <SelectValue placeholder="Select style (optional)" />
                     </SelectTrigger>
                     <SelectContent>
                       {TRAVEL_STYLES.map((s) => (
@@ -295,29 +395,33 @@ export default function PlanTripPage() {
           )}
 
           {step === 2 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Choose destinations</CardTitle>
-                <CardDescription>From our catalog (select at least one)</CardDescription>
+            <Card className="border-0 shadow-xl overflow-hidden">
+              <CardHeader className="bg-muted/30 border-b">
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  Choose destinations
+                </CardTitle>
+                <CardDescription>Select at least one destination from our catalog</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6 md:p-8">
                 {destinationsLoading ? (
-                  <p className="text-muted-foreground">Loading destinations…</p>
+                  <p className="text-muted-foreground py-8">Loading destinations…</p>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[420px] overflow-y-auto pr-1">
                     {destinations.map((d) => (
                       <button
                         key={d._id}
                         type="button"
                         onClick={() => toggleDestination(d._id)}
-                        className={`text-left p-4 rounded-xl border-2 transition-colors ${
+                        className={cn(
+                          "text-left p-4 rounded-xl border-2 transition-all",
                           selectedDestinationIds.includes(d._id)
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-primary/50"
-                        }`}
+                            ? "border-primary bg-primary/10 ring-1 ring-primary/20"
+                            : "border-border hover:border-primary/50 hover:bg-muted/30"
+                        )}
                       >
-                        <span className="font-medium">{d.name}</span>
-                        <span className="text-muted-foreground text-sm block">{d.country}</span>
+                        <span className="font-medium block">{d.name}</span>
+                        <span className="text-muted-foreground text-sm">{d.country}</span>
                       </button>
                     ))}
                   </div>
@@ -327,14 +431,17 @@ export default function PlanTripPage() {
           )}
 
           {step === 3 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Tours & hotels</CardTitle>
-                <CardDescription>Add suggested tours and hotels for your destinations</CardDescription>
+            <Card className="border-0 shadow-xl overflow-hidden">
+              <CardHeader className="bg-muted/30 border-b">
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-primary" />
+                  Tours & hotels
+                </CardTitle>
+                <CardDescription>Add tours and hotels for your chosen destinations</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="p-6 md:p-8 space-y-6">
                 {catalogLoading ? (
-                  <p className="text-muted-foreground">Loading suggestions…</p>
+                  <p className="text-muted-foreground py-8">Loading suggestions…</p>
                 ) : (
                   <>
                     {selectedDestinationIds.map((destId) => {
@@ -342,24 +449,28 @@ export default function PlanTripPage() {
                       const tours = toursByDest[destId] ?? [];
                       const hotels = hotelsByDest[destId] ?? [];
                       return (
-                        <div key={destId} className="border rounded-xl p-4 space-y-4">
-                          <h3 className="font-heading font-semibold text-lg">{dest?.name ?? destId}</h3>
+                        <div key={destId} className="rounded-xl border border-border bg-muted/10 p-5 space-y-4">
+                          <h3 className="font-heading font-semibold text-lg flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-primary" />
+                            {dest?.name ?? destId}
+                          </h3>
                           {tours.length > 0 && (
                             <div>
-                              <Label className="text-sm text-muted-foreground">Tours</Label>
+                              <Label className="text-sm font-medium text-muted-foreground">Tours</Label>
                               <div className="flex flex-wrap gap-2 mt-2">
                                 {tours.map((t) => (
                                   <button
                                     key={t._id}
                                     type="button"
                                     onClick={() => toggleTour(t._id)}
-                                    className={`px-3 py-2 rounded-lg border text-sm ${
+                                    className={cn(
+                                      "px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors",
                                       selectedTours.includes(t._id)
-                                        ? "border-primary bg-primary/10"
-                                        : "border-border"
-                                    }`}
+                                        ? "border-primary bg-primary/10 text-primary"
+                                        : "border-border hover:border-primary/50"
+                                    )}
                                   >
-                                    {t.title} (${t.priceFrom})
+                                    {t.title} · ${t.priceFrom}
                                   </button>
                                 ))}
                               </div>
@@ -367,20 +478,22 @@ export default function PlanTripPage() {
                           )}
                           {hotels.length > 0 && (
                             <div>
-                              <Label className="text-sm text-muted-foreground">Hotels</Label>
+                              <Label className="text-sm font-medium text-muted-foreground">Hotels</Label>
                               <div className="flex flex-wrap gap-2 mt-2">
                                 {hotels.map((h) => (
                                   <button
                                     key={h._id}
                                     type="button"
                                     onClick={() => toggleHotel(h._id)}
-                                    className={`px-3 py-2 rounded-lg border text-sm ${
+                                    className={cn(
+                                      "px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors",
                                       selectedHotels.includes(h._id)
-                                        ? "border-primary bg-primary/10"
-                                        : "border-border"
-                                    }`}
+                                        ? "border-primary bg-primary/10 text-primary"
+                                        : "border-border hover:border-primary/50"
+                                    )}
                                   >
                                     {h.name}
+                                    {h.priceFrom != null && ` · $${h.priceFrom}/night`}
                                   </button>
                                 ))}
                               </div>
@@ -402,22 +515,23 @@ export default function PlanTripPage() {
             <p className="text-destructive text-sm mt-4">{error}</p>
           )}
 
-          <div className="flex justify-between mt-8">
+          <div className="flex justify-between gap-4 mt-8">
             <Button
               variant="outline"
               onClick={() => setStep((s) => Math.max(1, s - 1))}
               disabled={step === 1}
+              className="rounded-xl"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </Button>
             {step < 3 ? (
-              <Button onClick={() => setStep((s) => s + 1)} disabled={!canGoNext}>
+              <Button onClick={() => setStep((s) => s + 1)} disabled={!canGoNext} className="rounded-xl">
                 Next
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             ) : (
-              <Button onClick={handleComplete} disabled={submitting}>
+              <Button onClick={handleComplete} disabled={submitting} className="rounded-xl">
                 {submitting ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />

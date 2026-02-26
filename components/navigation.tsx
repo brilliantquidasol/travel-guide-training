@@ -33,6 +33,9 @@ export function Navigation() {
     { href: "/dashboard", label: "Dashboard" },
   ]
 
+  const isHome = pathname === "/"
+  const useLightNav = isHome && mounted && !isScrolled
+
   return (
     <header
       className={cn(
@@ -44,10 +47,22 @@ export function Navigation() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <div className="bg-primary text-primary-foreground p-2 rounded-xl transition-transform group-hover:scale-110">
+            <div
+              className={cn(
+                "p-2 rounded-xl transition-all duration-300 group-hover:scale-110",
+                useLightNav ? "bg-white/20 text-white" : "bg-primary text-primary-foreground",
+              )}
+            >
               <Compass className="w-6 h-6" />
             </div>
-            <span className="font-heading font-bold text-2xl text-foreground">Wanderlust</span>
+            <span
+              className={cn(
+                "font-heading font-bold text-2xl transition-colors duration-300",
+                useLightNav ? "text-white" : "text-foreground",
+              )}
+            >
+              Wanderlust
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -57,13 +72,22 @@ export function Navigation() {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "font-medium transition-colors hover:text-primary relative py-2",
-                  pathname === link.href ? "text-primary" : "text-foreground/70",
+                  "font-medium transition-colors duration-300 hover:text-primary relative py-2",
+                  useLightNav
+                    ? pathname === link.href
+                      ? "text-white"
+                      : "text-white/90 hover:text-white"
+                    : pathname === link.href
+                      ? "text-primary"
+                      : "text-foreground/70",
                 )}
               >
                 {link.label}
-                {pathname === link.href && (
+                {pathname === link.href && !useLightNav && (
                   <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                )}
+                {pathname === link.href && useLightNav && (
+                  <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-full" />
                 )}
               </Link>
             ))}
@@ -72,7 +96,10 @@ export function Navigation() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 text-foreground hover:text-primary transition-colors"
+            className={cn(
+              "md:hidden p-2 transition-colors duration-300",
+              useLightNav ? "text-white hover:text-white/80" : "text-foreground hover:text-primary",
+            )}
             aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}

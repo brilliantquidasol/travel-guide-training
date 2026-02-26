@@ -9,7 +9,7 @@ import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { getTrip, createCheckoutSession, type Trip } from "@/lib/api";
 import { getStoredUserId } from "@/lib/auth";
-import { Loader2, CreditCard, ArrowLeft } from "lucide-react";
+import { Loader2, CreditCard, ArrowLeft, ArrowRight } from "lucide-react";
 
 function formatDate(s: string | undefined) {
   if (!s) return "—";
@@ -145,26 +145,28 @@ function CheckoutContent() {
           <p className="text-destructive text-sm mb-4">{error}</p>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex flex-col-reverse sm:flex-row gap-3">
+          <Button variant="outline" asChild className="rounded-xl sm:rounded-full">
+            <Link href={`/dashboard/trips/${tripId}`}>Cancel</Link>
+          </Button>
           <Button
             onClick={handleCheckout}
             disabled={redirecting || bookableCount === 0}
-            className="flex-1"
+            size="lg"
+            className="flex-1 rounded-full bg-primary px-8 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:bg-primary/90 transition-all"
           >
             {redirecting ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                 Redirecting…
               </>
             ) : (
               <>
-                <CreditCard className="h-4 w-4 mr-2" />
+                <CreditCard className="h-5 w-5 mr-2" />
                 Proceed to payment
+                <ArrowRight className="h-5 w-5 ml-2" />
               </>
             )}
-          </Button>
-          <Button variant="outline" asChild>
-            <Link href={`/dashboard/trips/${tripId}`}>Cancel</Link>
           </Button>
         </div>
       </main>

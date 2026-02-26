@@ -14,6 +14,7 @@ function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
   const tripId = searchParams.get("trip_id");
+  const isDemo = searchParams.get("demo") === "1";
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,10 +44,14 @@ function SuccessContent() {
       <main className="container mx-auto max-w-lg px-4 pt-28 pb-12">
         <div className="flex flex-col items-center text-center mb-8">
           <CheckCircle2 className="h-16 w-16 text-green-600 mb-4" />
-          <h1 className="font-heading text-3xl font-bold">Payment successful</h1>
+          <h1 className="font-heading text-3xl font-bold">
+            {isDemo ? "Checkout complete (demo)" : "Payment successful"}
+          </h1>
           <p className="text-muted-foreground mt-2">
-            Your booking has been confirmed.
-            {sessionId && (
+            {isDemo
+              ? "No real payment was made. Start the API and Stripe to process real payments."
+              : "Your booking has been confirmed."}
+            {sessionId && !sessionId.startsWith("demo-") && (
               <span className="block text-sm mt-1">Session: {sessionId.slice(0, 20)}…</span>
             )}
           </p>

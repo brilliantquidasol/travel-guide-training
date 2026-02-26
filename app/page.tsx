@@ -9,21 +9,31 @@ import { Testimonials } from "@/components/marketing/testimonials";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
-import { getDestinations, getTours } from "@/lib/api";
+import { getDestinations, getTours, getHotels } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   let popularDestinations: Awaited<ReturnType<typeof getDestinations>>["items"] = [];
   let featuredTours: Awaited<ReturnType<typeof getTours>>["items"] = [];
+  let searchDestinations: Awaited<ReturnType<typeof getDestinations>>["items"] = [];
+  let searchTours: Awaited<ReturnType<typeof getTours>>["items"] = [];
+  let searchHotels: Awaited<ReturnType<typeof getHotels>>["items"] = [];
 
   try {
-    const [destRes, toursRes] = await Promise.all([
+    const [destRes, toursRes, hotelsRes, destSearchRes, toursSearchRes, hotelsSearchRes] = await Promise.all([
       getDestinations({ limit: 6 }),
       getTours({ limit: 3 }),
+      getHotels({ limit: 6 }),
+      getDestinations({ limit: 50 }),
+      getTours({ limit: 50 }),
+      getHotels({ limit: 50 }),
     ]);
     popularDestinations = Array.isArray(destRes?.items) ? destRes.items : [];
     featuredTours = Array.isArray(toursRes?.items) ? toursRes.items : [];
+    searchDestinations = Array.isArray(destSearchRes?.items) ? destSearchRes.items : [];
+    searchTours = Array.isArray(toursSearchRes?.items) ? toursSearchRes.items : [];
+    searchHotels = Array.isArray(hotelsSearchRes?.items) ? hotelsSearchRes.items : [];
   } catch (_e) {
     // Stub data when API is unavailable
     popularDestinations = [
@@ -87,6 +97,9 @@ export default async function HomePage() {
         destinations: [],
       },
     ];
+    searchDestinations = popularDestinations;
+    searchTours = featuredTours;
+    searchHotels = [];
   }
 
   return (
@@ -111,7 +124,11 @@ export default async function HomePage() {
           <p className="text-lg md:text-xl text-white/90 mb-10 max-w-2xl mx-auto animate-slide-up">
             Discover destinations, curated tours, and hand-picked stays. Plan it all in one place.
           </p>
-          <HeroSearch />
+          <HeroSearch
+            searchDestinations={searchDestinations}
+            searchTours={searchTours}
+            searchHotels={searchHotels}
+          />
         </div>
       </section>
 

@@ -15,7 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { getTrip, updateTrip, type Trip, type ItineraryItem } from "@/lib/api";
-import { ArrowLeft, Plus, Pencil, Trash2, Loader2, MapPin, CreditCard } from "lucide-react";
+import { ArrowLeft, ArrowRight, Plus, Pencil, Trash2, Loader2, MapPin, CreditCard } from "lucide-react";
 
 function formatDate(s: string | undefined) {
   if (!s) return "—";
@@ -161,21 +161,28 @@ export default function DashboardTripPage() {
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="mb-8">
-          <h1 className="font-heading font-bold text-3xl">{trip.title}</h1>
-          <p className="text-muted-foreground mt-1">
-            {formatDate(trip.startDate)} – {formatDate(trip.endDate)}
-            {trip.originCity && ` · From ${trip.originCity}`}
-          </p>
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            <span className="inline-block px-2 py-1 rounded-md bg-muted text-muted-foreground text-sm capitalize">
-              {trip.status}
-            </span>
+        <div className="mb-8 rounded-xl border bg-card p-6 md:p-8 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1 min-w-0">
+              <h1 className="font-heading font-bold text-2xl md:text-3xl">{trip.title}</h1>
+              <p className="text-muted-foreground">
+                {formatDate(trip.startDate)} – {formatDate(trip.endDate)}
+                {trip.originCity && ` · From ${trip.originCity}`}
+              </p>
+              <span className="inline-block mt-2 px-3 py-1 rounded-lg bg-muted text-muted-foreground text-sm font-medium capitalize">
+                {trip.status}
+              </span>
+            </div>
             {(trip.itinerary?.length ?? 0) > 0 && (
-              <Button size="sm" asChild>
+              <Button
+                asChild
+                size="lg"
+                className="shrink-0 rounded-full bg-primary px-8 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:bg-primary/90 transition-all"
+              >
                 <Link href={`/checkout?trip_id=${tripId}`}>
-                  <CreditCard className="w-4 h-4 mr-2" />
+                  <CreditCard className="w-5 h-5 mr-2" />
                   Proceed to checkout
+                  <ArrowRight className="w-5 h-5 ml-2" />
                 </Link>
               </Button>
             )}

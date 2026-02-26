@@ -1,4 +1,5 @@
 import { getAuthHeaders } from "@/lib/auth";
+import { staticDestinations, staticTours, staticHotels } from "@/lib/static-data";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
 
@@ -8,35 +9,37 @@ function emptyPaginated<T>(limit = 20): Paginated<T> {
   return { items: [], total: 0, page: 1, limit, totalPages: 0 };
 }
 
+function paginate<T>(items: T[], page: number, limit: number): Paginated<T> {
+  const total = items.length;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const p = Math.max(1, Math.min(page, totalPages));
+  const start = (p - 1) * limit;
+  return {
+    items: items.slice(start, start + limit),
+    total,
+    page: p,
+    limit,
+    totalPages,
+  };
+}
+
 export async function getDestinations(params?: {
   page?: number;
   limit?: number;
   continent?: string;
   country?: string;
 }): Promise<Paginated<Destination>> {
-  const sp = new URLSearchParams();
-  if (params?.page) sp.set("page", String(params.page));
+  let list = [...staticDestinations] as Destination[];
+  if (params?.continent) list = list.filter((d) => d.continent === params.continent);
+  if (params?.country) list = list.filter((d) => d.country === params.country);
   const limit = params?.limit ?? 20;
-  if (params?.limit) sp.set("limit", String(params.limit));
-  if (params?.continent) sp.set("continent", params.continent);
-  if (params?.country) sp.set("country", params.country);
-  const res = await fetch(`${API_BASE}/destinations?${sp}`, {
-    next: { revalidate: 60 },
-  }).catch(() => null);
-  if (!res) return emptyPaginated<Destination>(limit);
-  if (!res.ok) throw new Error("Failed to fetch destinations");
-  const data = await res.json().catch(() => emptyPaginated<Destination>(limit));
-  return data;
+  const page = params?.page ?? 1;
+  return paginate(list, page, limit);
 }
 
 export async function getDestinationBySlug(slug: string): Promise<Destination | null> {
-  const res = await fetch(`${API_BASE}/destinations/by-slug/${encodeURIComponent(slug)}`, {
-    next: { revalidate: 60 },
-  }).catch(() => null);
-  if (!res) return null;
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error("Failed to fetch destination");
-  return res.json().catch(() => null);
+  const d = staticDestinations.find((x) => x.slug === slug);
+  return (d ?? null) as Destination | null;
 }
 
 export async function getTours(params?: {
@@ -46,27 +49,17 @@ export async function getTours(params?: {
   minDays?: number;
   maxPrice?: number;
 }): Promise<Paginated<Tour>> {
-  const sp = new URLSearchParams();
-  if (params?.page) sp.set("page", String(params.page));
+  let list = [...staticTours] as Tour[];
+  if (params?.minDays != null) list = list.filter((t) => t.durationDays >= params.minDays!);
+  if (params?.maxPrice != null) list = list.filter((t) => t.priceFrom <= params.maxPrice!);
   const limit = params?.limit ?? 20;
-  if (params?.limit) sp.set("limit", String(params.limit));
-  if (params?.destinationId) sp.set("destinationId", params.destinationId);
-  if (params?.minDays != null) sp.set("minDays", String(params.minDays));
-  if (params?.maxPrice != null) sp.set("maxPrice", String(params.maxPrice));
-  const res = await fetch(`${API_BASE}/tours?${sp}`, {
-    next: { revalidate: 60 },
-  }).catch(() => null);
-  if (!res) return emptyPaginated<Tour>(limit);
-  if (!res.ok) throw new Error("Failed to fetch tours");
-  const data = await res.json().catch(() => emptyPaginated<Tour>(limit));
-  return data;
+  const page = params?.page ?? 1;
+  return paginate(list, page, limit);
 }
 
 export async function getTourBySlug(slug: string): Promise<Tour | null> {
-  const res = await fetch(`${API_BASE}/tours/by-slug/${encodeURIComponent(slug)}`);
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error("Failed to fetch tour");
-  return res.json();
+  const t = staticTours.find((x) => x.slug === slug);
+  return (t ?? null) as Tour | null;
 }
 
 export async function getHotels(params?: {
@@ -75,23 +68,16 @@ export async function getHotels(params?: {
   destinationId?: string;
   minRating?: number;
 }): Promise<Paginated<Hotel>> {
-  const sp = new URLSearchParams();
-  if (params?.page) sp.set("page", String(params.page));
+  let list = [...staticHotels] as Hotel[];
+  if (params?.minRating != null) list = list.filter((h) => (h.rating ?? 0) >= params.minRating!);
   const limit = params?.limit ?? 20;
-  if (params?.limit) sp.set("limit", String(params.limit));
-  if (params?.destinationId) sp.set("destinationId", params.destinationId);
-  if (params?.minRating != null) sp.set("minRating", String(params.minRating));
-  const res = await fetch(`${API_BASE}/hotels?${sp}`).catch(() => null);
-  if (!res) return emptyPaginated<Hotel>(limit);
-  if (!res.ok) throw new Error("Failed to fetch hotels");
-  return res.json();
+  const page = params?.page ?? 1;
+  return paginate(list, page, limit);
 }
 
 export async function getHotelBySlug(slug: string): Promise<Hotel | null> {
-  const res = await fetch(`${API_BASE}/hotels/by-slug/${encodeURIComponent(slug)}`);
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error("Failed to fetch hotel");
-  return res.json();
+  const h = staticHotels.find((x) => x.slug === slug);
+  return (h ?? null) as Hotel | null;
 }
 
 export type Destination = {
@@ -117,6 +103,11 @@ export type Tour = {
   priceFrom: number;
   highlights?: string[];
   destinations?: { _id: string; name: string; slug: string; country?: string }[];
+  heroImage?: string;
+  gallery?: string[];
+  shortDescription?: string;
+  longDescription?: string;
+  categories?: string[];
 };
 
 export type Hotel = {
@@ -128,6 +119,9 @@ export type Hotel = {
   location?: { address?: string; city?: string; country?: string };
   gallery?: string[];
   destination?: { _id: string; name: string; slug: string };
+  shortDescription?: string;
+  longDescription?: string;
+  priceFrom?: number;
 };
 
 // --- Trip (plan-trip + dashboard) ---
@@ -180,24 +174,51 @@ function authHeaders(): Record<string, string> {
   return getAuthHeaders();
 }
 
+const LOCAL_TRIPS_KEY = "travel_guide_trips";
+
+function getLocalTrips(): Trip[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LOCAL_TRIPS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setLocalTrips(trips: Trip[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(LOCAL_TRIPS_KEY, JSON.stringify(trips));
+  } catch {
+    // ignore
+  }
+}
+
 export async function getMe(): Promise<AuthUser | null> {
   const res = await fetch(`${API_BASE}/users/me`, {
     headers: { ...authHeaders() },
   }).catch(() => null);
   if (!res) return null;
   if (res.status === 401 || res.status === 403) return null;
-  if (!res.ok) throw new Error("Failed to fetch current user");
-  return res.json();
+  if (!res.ok) return null;
+  return res.json().catch(() => null);
 }
 
 export async function getTrip(id: string): Promise<Trip | null> {
   const res = await fetch(`${API_BASE}/trips/${id}`, {
     headers: { ...authHeaders() },
   }).catch(() => null);
-  if (!res) return null;
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error("Failed to fetch trip");
-  return res.json();
+  if (!res) {
+    const local = getLocalTrips().find((t) => t._id === id);
+    return local ?? null;
+  }
+  if (res.status === 404) {
+    const local = getLocalTrips().find((t) => t._id === id);
+    return local ?? null;
+  }
+  if (!res.ok) return null;
+  return res.json().catch(() => null);
 }
 
 export async function getMyTrips(params?: {
@@ -205,17 +226,21 @@ export async function getMyTrips(params?: {
   limit?: number;
   status?: string;
 }): Promise<Paginated<Trip>> {
-  const sp = new URLSearchParams();
-  if (params?.page) sp.set("page", String(params.page));
-  if (params?.limit) sp.set("limit", String(params.limit));
-  if (params?.status) sp.set("status", params.status);
   const limit = params?.limit ?? 20;
+  const page = params?.page ?? 1;
+  const sp = new URLSearchParams();
+  sp.set("page", String(page));
+  sp.set("limit", String(limit));
+  if (params?.status) sp.set("status", params.status);
   const res = await fetch(`${API_BASE}/trips/my?${sp}`, {
     headers: { ...authHeaders() },
   }).catch(() => null);
-  if (!res) return emptyPaginated<Trip>(limit);
-  if (!res.ok) throw new Error("Failed to fetch trips");
-  return res.json();
+  if (!res || !res.ok) {
+    const all = getLocalTrips();
+    const filtered = params?.status ? all.filter((t) => t.status === params.status) : all;
+    return paginate(filtered as Trip[], page, limit);
+  }
+  return res.json().catch(() => emptyPaginated<Trip>(limit));
 }
 
 export async function createTrip(body: {
@@ -236,12 +261,32 @@ export async function createTrip(body: {
       ...authHeaders(),
     },
     body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || "Failed to create trip");
+  }).catch(() => null);
+
+  if (res?.ok) {
+    const trip = await res.json().catch(() => null);
+    if (trip) return trip;
   }
-  return res.json();
+
+  // API unavailable: save trip locally so plan-trip works without backend
+  const trip: Trip = {
+    _id: "local-" + Date.now(),
+    user: { _id: "local-user" },
+    title: body.title,
+    startDate: body.startDate,
+    endDate: body.endDate,
+    status: "draft",
+    originCity: body.originCity,
+    budget: body.budget,
+    travelerCount: body.travelerCount,
+    travelStyle: body.travelStyle,
+    destinationIds: body.destinationIds?.map((id) => ({ _id: id, name: "", slug: "" })),
+    itinerary: body.itinerary ?? [],
+  };
+  const local = getLocalTrips();
+  local.unshift(trip);
+  setLocalTrips(local);
+  return trip;
 }
 
 export async function updateTrip(
@@ -259,6 +304,15 @@ export async function updateTrip(
     itinerary: ItineraryItem[];
   }>
 ): Promise<Trip> {
+  if (id.startsWith("local-")) {
+    const local = getLocalTrips();
+    const idx = local.findIndex((t) => t._id === id);
+    if (idx === -1) throw new Error("Trip not found");
+    const updated = { ...local[idx], ...body } as Trip;
+    local[idx] = updated;
+    setLocalTrips(local);
+    return updated;
+  }
   const res = await fetch(`${API_BASE}/trips/${id}`, {
     method: "PATCH",
     headers: {
@@ -266,8 +320,8 @@ export async function updateTrip(
       ...authHeaders(),
     },
     body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error("Failed to update trip");
+  }).catch(() => null);
+  if (!res?.ok) throw new Error("Failed to update trip");
   return res.json();
 }
 
@@ -303,10 +357,29 @@ export async function createCheckoutSession(params: {
       ...authHeaders(),
     },
     body: JSON.stringify(params),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.message ?? "Failed to create checkout session");
+  }).catch(() => null);
+
+  if (res?.ok) {
+    const data = await res.json().catch(() => null);
+    if (data?.url) return data;
   }
-  return res.json();
+
+  // API/Stripe unavailable: redirect to success page in demo mode so checkout flow completes
+  const base = typeof window !== "undefined" ? window.location.origin : "";
+  let demoUrl: string;
+  if (params.successUrl) {
+    try {
+      const u = new URL(params.successUrl);
+      u.searchParams.set("demo", "1");
+      demoUrl = u.toString();
+    } catch {
+      demoUrl = `${base}/checkout/success?trip_id=${params.tripId}&demo=1`;
+    }
+  } else {
+    demoUrl = `${base}/checkout/success?trip_id=${params.tripId}&demo=1`;
+  }
+  return {
+    url: demoUrl,
+    sessionId: "demo-" + Date.now(),
+  };
 }

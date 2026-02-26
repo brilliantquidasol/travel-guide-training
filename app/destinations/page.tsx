@@ -7,7 +7,7 @@ import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { DestinationCard } from "@/components/marketing/destination-card";
-import { MapPin, ArrowRight, Filter } from "lucide-react";
+import { MapPin, ArrowRight, SlidersHorizontal, X } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -16,7 +16,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getDestinations, type Destination } from "@/lib/api";
-import { ApiEmptyHint } from "@/components/api-empty-hint";
 
 const CONTINENTS = [
   "All",
@@ -81,47 +80,59 @@ export default function DestinationsPage() {
         </div>
       </section>
 
-      <section className="container mx-auto px-4 lg:px-8 py-8">
-        <Card className="shadow-md">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center gap-4 mb-4">
-              <Filter className="w-5 h-5 text-primary shrink-0" />
-              <h3 className="font-heading font-semibold text-lg">Filters</h3>
-            </div>
-            <div className="flex flex-wrap gap-4">
-              <Select value={continent} onValueChange={setContinent}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Continent" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CONTINENTS.map((c) => (
-                    <SelectItem key={c} value={c === "All" ? "All" : c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={tagFilter} onValueChange={setTagFilter}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Tag" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All">All tags</SelectItem>
-                  {allTags.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {t}
-                    </SelectItem>
-                  ))}
-                  {allTags.length === 0 && (
-                    <SelectItem value="All" disabled>
-                      No tags
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+      <section className="border-b border-border bg-muted/20">
+        <div className="container mx-auto px-4 lg:px-8 py-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground mr-2">
+              <SlidersHorizontal className="w-4 h-4" />
+              Filter
+            </span>
+            <Select value={continent} onValueChange={setContinent}>
+              <SelectTrigger className="w-[160px] h-9 rounded-full border-border bg-background text-sm font-normal">
+                <SelectValue placeholder="Continent" />
+              </SelectTrigger>
+              <SelectContent>
+                {CONTINENTS.map((c) => (
+                  <SelectItem key={c} value={c === "All" ? "All" : c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={tagFilter} onValueChange={setTagFilter}>
+              <SelectTrigger className="w-[140px] h-9 rounded-full border-border bg-background text-sm font-normal">
+                <SelectValue placeholder="Tag" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All tags</SelectItem>
+                {allTags.map((t) => (
+                  <SelectItem key={t} value={t}>
+                    {t}
+                  </SelectItem>
+                ))}
+                {allTags.length === 0 && (
+                  <SelectItem value="All" disabled>
+                    No tags
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+            {(continent !== "All" || tagFilter !== "All") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 rounded-full text-muted-foreground hover:text-foreground -ml-1"
+                onClick={() => {
+                  setContinent("All");
+                  setTagFilter("All");
+                }}
+              >
+                <X className="w-4 h-4 mr-1" />
+                Clear
+              </Button>
+            )}
+          </div>
+        </div>
       </section>
 
       <section className="container mx-auto px-4 lg:px-8 pb-20">
@@ -145,7 +156,6 @@ export default function DestinationsPage() {
                 ? "No destinations yet."
                 : "No destinations match your filters."}
             </p>
-            {data.total === 0 && <ApiEmptyHint />}
           </div>
         ) : (
           <>

@@ -45,17 +45,26 @@ export default function DashboardTripsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight">My Trips</h1>
-          <p className="text-muted-foreground mt-1">View and edit your trip itineraries</p>
+      <div className="rounded-xl border bg-card p-6 md:p-8 shadow-sm">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <MapPin className="h-6 w-6" />
+              </div>
+              <h1 className="font-heading text-3xl font-bold tracking-tight md:text-4xl">My Trips</h1>
+            </div>
+            <p className="text-muted-foreground text-base max-w-xl">
+              View and manage your trip itineraries. Open a trip to add tours and hotels, then proceed to checkout when you’re ready.
+            </p>
+          </div>
+          <Button asChild className="w-full sm:w-auto rounded-xl shrink-0" size="lg">
+            <Link href="/plan-trip">
+              <Plus className="w-4 h-4 mr-2" />
+              Plan new trip
+            </Link>
+          </Button>
         </div>
-        <Button asChild>
-          <Link href="/plan-trip">
-            <Plus className="w-4 h-4 mr-2" />
-            Plan new trip
-          </Link>
-        </Button>
       </div>
 
       {loading ? (

@@ -7,6 +7,8 @@ import { Footer } from "@/components/footer";
 import { Calendar, MapPin, DollarSign, Check } from "lucide-react";
 import { getTourBySlug } from "@/lib/api";
 
+const DEFAULT_TOUR_HERO = "https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=1200&q=80";
+
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props) {
@@ -23,15 +25,18 @@ export default async function TourSlugPage({ params }: Props) {
 
   const destinationNames =
     tour.destinations?.map((d) => d.name).join(", ") || "Multiple destinations";
+  const heroImage = tour.heroImage || DEFAULT_TOUR_HERO;
+  const gallery = tour.gallery && tour.gallery.length > 0 ? tour.gallery : [heroImage, heroImage, heroImage];
 
   return (
     <div className="min-h-screen">
       <Navigation />
 
       <section className="relative min-h-[50vh] flex items-end overflow-hidden mt-20">
-        <div className="absolute inset-0 bg-muted flex items-center justify-center">
-          <span className="text-9xl opacity-20">✈</span>
-        </div>
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url('${heroImage}')` }}
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
         <div className="relative z-10 container mx-auto px-4 lg:px-8 pb-16">
           <Link href="/tours">
@@ -60,9 +65,20 @@ export default async function TourSlugPage({ params }: Props) {
       </section>
 
       <section className="container mx-auto px-4 lg:px-8 py-12">
-        <div className="max-w-3xl">
+        <div className="max-w-3xl space-y-8">
+          {tour.longDescription && (
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="font-heading font-bold text-2xl mb-4">About this tour</h2>
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {tour.longDescription}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {tour.highlights && tour.highlights.length > 0 && (
-            <Card className="mb-8">
+            <Card>
               <CardContent className="p-6">
                 <h2 className="font-heading font-bold text-2xl mb-4">Highlights</h2>
                 <ul className="space-y-2">
@@ -73,6 +89,29 @@ export default async function TourSlugPage({ params }: Props) {
                     </li>
                   ))}
                 </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {gallery.length > 0 && (
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="font-heading font-bold text-2xl mb-4">Gallery</h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {gallery.map((src, i) => (
+                    <div
+                      key={i}
+                      className="relative aspect-[4/3] rounded-lg overflow-hidden bg-muted"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={src}
+                        alt={`${tour.title} photo ${i + 1}`}
+                        className="object-cover w-full h-full"
+                      />
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}

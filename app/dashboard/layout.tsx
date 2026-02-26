@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   MapPin,
   Wallet,
-  Sparkles,
   Gift,
   Award,
   Headphones,
@@ -16,10 +15,13 @@ import {
   Settings,
   Menu,
   Compass,
+  LogOut,
 } from "lucide-react";
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { DashboardGuard } from "./DashboardGuard";
+import { clearStoredUserId } from "@/lib/auth";
 
 const navSections: { label: string; href: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
@@ -39,7 +41,14 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const handleLogout = useCallback(() => {
+    clearStoredUserId();
+    router.replace("/login?callbackUrl=/dashboard");
+    router.refresh();
+  }, [router]);
 
   const handleMobileOpenChange = useCallback((open: boolean) => {
     setMobileOpen((prev) => (prev === open ? prev : open));
@@ -70,6 +79,7 @@ export default function DashboardLayout({
   );
 
   return (
+    <DashboardGuard>
     <div className="min-h-screen bg-muted/30">
       <header className="sticky top-0 z-40 border-b bg-card">
         <div className="flex h-14 items-center gap-4 px-4 lg:px-6">
@@ -112,5 +122,6 @@ export default function DashboardLayout({
         <main className="min-w-0 flex-1 p-4 lg:p-6">{children}</main>
       </div>
     </div>
+    </DashboardGuard>
   );
 }
