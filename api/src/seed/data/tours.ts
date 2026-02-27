@@ -230,6 +230,7 @@ export const tourSeeds: TourSeed[] = [
     durationDays: 5,
     groupSize: 8,
     priceFrom: 2799,
+    featured: true,
     categories: ['Coastal Escapes', 'Exclusive Retreats'],
     shortDescription: 'Nice, Monaco, and Saint-Tropez with private yacht day and palace stays.',
     longDescription: 'Combine a private yacht day along the Côte d\'Azur with stays in Nice and Monaco. Art, gastronomy, and coastal glamour with expert guides.',
