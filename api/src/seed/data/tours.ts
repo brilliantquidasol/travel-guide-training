@@ -10,7 +10,7 @@ export interface TourSeed {
   groupSize: number;
   priceFrom: number;
   discountPrice?: number;
-  featured: boolean;
+  featured?: boolean;
   categories: string[];
   shortDescription: string;
   longDescription: string;
