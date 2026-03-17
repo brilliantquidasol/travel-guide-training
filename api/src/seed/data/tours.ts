@@ -24,7 +24,10 @@ export interface TourSeed {
   galleryAltTexts: string[];
 }
 
-export const tourSeeds: TourSeed[] = [
+/** Seed data type: featured is optional; runner defaults to false */
+export type TourSeedRow = Omit<TourSeed, 'featured'> & { featured?: boolean };
+
+export const tourSeeds: TourSeedRow[] = [
   {
     title: 'Santorini Caldera & Villages',
     slug: 'santorini-caldera-villages',
