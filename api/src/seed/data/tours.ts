@@ -10,7 +10,6 @@ export interface TourSeed {
   groupSize: number;
   priceFrom: number;
   discountPrice?: number;
-  featured?: boolean;
   categories: string[];
   shortDescription: string;
   longDescription: string;
@@ -25,7 +24,7 @@ export interface TourSeed {
 }
 
 /** Seed data type: featured is optional; runner defaults to false */
-export type TourSeedRow = Omit<TourSeed, 'featured'> & { featured?: boolean };
+export type TourSeedRow = TourSeed & { featured?: boolean };
 
 export const tourSeeds: TourSeedRow[] = [
   {
