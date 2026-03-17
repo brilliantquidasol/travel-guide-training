@@ -19,10 +19,6 @@ The dev server **must run in your own terminal** so your browser can connect to 
    ```
    If you see "Port 3000 is in use", try:
    ```bash
-   npm run dev:host
-   ```
-   or:
-   ```bash
    npx next dev -p 3001
    ```
 

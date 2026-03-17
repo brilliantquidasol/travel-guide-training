@@ -2,10 +2,12 @@
   "name": "my-v0-project",
   "version": "0.1.0",
   "private": true,
+  "pnpm": {
+    "onlyBuiltDependencies": ["sharp"]
+  },
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "dev:host": "next dev --turbopack -H 127.0.0.1 -p 3000",
     "lint": "eslint .",
     "start": "next start"
   },
